@@ -19,6 +19,8 @@
 package de.tuberlin.dima.aim3.assignment4;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
@@ -40,12 +42,34 @@ public class Training {
     DataSet<Tuple3<String, String, Long>> labeledTerms = input.flatMap(new DataReader());
 
     // conditional counter per word per label
-    DataSet<Tuple3<String, String, Long>> termCounts = null; // IMPLEMENT ME
+    DataSet<Tuple3<String, String, Long>> termCounts = labeledTerms
+    		.groupBy(0,1) // Label, word 
+    		.reduce(new ReduceFunction<Tuple3<String,String,Long>>() {
+				@Override
+				public Tuple3<String, String, Long> reduce(Tuple3<String, String, Long> arg0,
+						Tuple3<String, String, Long> arg1) throws Exception {
+					return new Tuple3<String, String, Long>(arg0.f0, arg0.f1, arg0.f2 + arg1.f2);
+				}
+			});
 
     termCounts.writeAsCsv(Config.pathToConditionals(), "\n", "\t", FileSystem.WriteMode.OVERWRITE);
 
     // word counts per label
-    DataSet<Tuple2<String, Long>> termLabelCounts = null; // IMPLEMENT ME
+    DataSet<Tuple2<String, Long>> termLabelCounts = labeledTerms
+    		.map(new MapFunction<Tuple3<String,String,Long>, Tuple2<String, Long>>() { // Discards word field
+				@Override
+				public Tuple2<String, Long> map(Tuple3<String, String, Long> arg0) throws Exception {
+					return new Tuple2<String, Long>(arg0.f0, arg0.f2);
+				}
+			})
+    		.groupBy(0) // label
+    		.reduce(new ReduceFunction<Tuple2<String,Long>>() {
+				@Override
+				public Tuple2<String, Long> reduce(Tuple2<String, Long> arg0, Tuple2<String, Long> arg1)
+						throws Exception {
+					return new Tuple2<String, Long>(arg0.f0, arg0.f1+arg1.f1);
+				}
+			});
 
     termLabelCounts.writeAsCsv(Config.pathToSums(), "\n", "\t", FileSystem.WriteMode.OVERWRITE);
 
