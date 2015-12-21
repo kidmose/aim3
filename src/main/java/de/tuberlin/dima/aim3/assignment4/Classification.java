@@ -117,10 +117,20 @@ public class Classification {
        for (String currentLabel : wordSums.keySet()) {
     	   double probability = 0;  
     	   for (String t : terms) {
-    		   probability += Math.log(
-    				   wordCounts.get(currentLabel).get(t) / // P^(w|Y=y)
-    				   		(wordCounts.get(currentLabel).get(t)-wordCounts.get(currentLabel).get(t))
-    				   );
+
+    		   Long count_w_y = null;
+    		   Map<String, Long> m = null;
+    		   m = wordCounts.get(currentLabel);
+    		   if (m != null) 
+    			   count_w_y = m.get(t);
+    		   if (count_w_y == null)
+    			   	count_w_y = 0L;
+    		   
+    		   Long count_w_not_y = wordSums.get(currentLabel)-count_w_y;
+    		   if (count_w_not_y == null)
+    			   count_w_not_y = 0L;
+    		   
+    		   probability += Math.log((double)count_w_y/(double)count_w_not_y);
     	   }
     	   if (probability > maxProbability) {
     		   maxProbability = probability;
