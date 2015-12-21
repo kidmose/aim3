@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class Classification {
+	
+	public static final int k = 1; // For Laplace smoothing
 
   public static void main(String[] args) throws Exception {
 
@@ -125,10 +127,12 @@ public class Classification {
     			   count_w_y = m.get(t);
     		   if (count_w_y == null)
     			   	count_w_y = 0L;
+    		   count_w_y += k; // smoothing
     		   
-    		   Long count_w_not_y = wordSums.get(currentLabel)-count_w_y;
+    		   Long count_w_not_y = wordSums.get(currentLabel);
     		   if (count_w_not_y == null)
     			   count_w_not_y = 0L;
+    		   count_w_not_y += -count_w_y + (wordSums.size()-1)*k;
     		   
     		   probability += Math.log((double)count_w_y/(double)count_w_not_y);
     	   }
