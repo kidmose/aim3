@@ -30,7 +30,9 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
 
+import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public class Classification {
 
@@ -81,9 +83,25 @@ public class Classification {
 
      @Override
      public void open(Configuration parameters) throws Exception {
-       super.open(parameters);
+    	 super.open(parameters);
 
-       // IMPLEMENT ME
+    	 // IMPLEMENT ME
+    	 // Take <Label, word, count> from broadcast and store in hashmap
+    	 Collection<Tuple3<String, String, Long>> conditionals = getRuntimeContext().getBroadcastVariable("conditionals");
+    	 for (Tuple3<String, String, Long> t : conditionals) {
+    		 Map<String, Long> m = wordCounts.get(t.f0);
+    		 if (m == null) {
+    			 m = Maps.newHashMap();
+    			 wordCounts.put(t.f0, m);
+    		 }
+    		 m.put(t.f1, t.f2);
+    	 }
+
+    	 // take <Label, total word count> from broadcast to hashmap
+    	 Collection<Tuple2<String, Long>> sums = getRuntimeContext().getBroadcastVariable("sums");
+    	 for (Tuple2<String, Long> t : sums) {
+    		 wordSums.put(t.f0, t.f1);
+    	 }
      }
 
      @Override
@@ -96,7 +114,19 @@ public class Classification {
        double maxProbability = Double.NEGATIVE_INFINITY;
        String predictionLabel = "";
 
-       // IMPLEMENT ME
+       for (String currentLabel : wordSums.keySet()) {
+    	   double probability = 0;  
+    	   for (String t : terms) {
+    		   probability += Math.log(
+    				   wordCounts.get(currentLabel).get(t) / // P^(w|Y=y)
+    				   		(wordCounts.get(currentLabel).get(t)-wordCounts.get(currentLabel).get(t))
+    				   );
+    	   }
+    	   if (probability > maxProbability) {
+    		   maxProbability = probability;
+    		   predictionLabel = currentLabel;
+    	   }
+       }
 
        return new Tuple3<String, String, Double>(label, predictionLabel, maxProbability);
      }
