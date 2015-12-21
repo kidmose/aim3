@@ -48,6 +48,7 @@ public class Classification {
     DataSet<Tuple3<String, String, Long>> conditionals = conditionalInput.map(new ConditionalReader());
     DataSet<Tuple2<String, Long>> sums = sumInput.map(new SumReader());
 
+    // Test 
     DataSource<String> testData = env.readTextFile(Config.pathToTestSet());
 
     DataSet<Tuple3<String, String, Double>> classifiedDataPoints = testData.map(new Classifier())
@@ -55,6 +56,15 @@ public class Classification {
         .withBroadcastSet(sums, "sums");
 
     classifiedDataPoints.writeAsCsv(Config.pathToOutput(), "\n", "\t", FileSystem.WriteMode.OVERWRITE);
+    
+    // Secret
+    DataSource<String> secretTestData = env.readTextFile(Config.pathToSecretTestSet());
+
+    DataSet<Tuple3<String, String, Double>> secretDataPoints = secretTestData.map(new Classifier())
+        .withBroadcastSet(conditionals, "conditionals")
+        .withBroadcastSet(sums, "sums");
+
+    secretDataPoints.writeAsCsv(Config.pathToSecretOutput(), "\n", "\t", FileSystem.WriteMode.OVERWRITE);
 
     env.execute();
   }
